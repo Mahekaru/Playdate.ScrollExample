@@ -1,0 +1,9 @@
+pdxversion=20000
+buildtime=749147335
+name=Scroll Example
+author=Mahekaru
+description=Scroll And Collision demo
+bundleID=com.panic.mahekaru
+version=1.0
+buildNumber=8
+imagePath=.assets/link

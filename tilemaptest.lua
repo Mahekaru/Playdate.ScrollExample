@@ -1,4 +1,6 @@
 import "CoreLibs/sprites"
+import 'CoreLibs/graphics'
+
 gfx = playdate.graphics
 
 local TILE_WIDTH = 50 -- 3 rows
@@ -7,13 +9,18 @@ local BUFFER_TILES = 20 -- Ensure this is the actual height of your tilemap. Adj
 local SCROLL_SPEED = 3
 
 -- Is down being pressed
+local updown = false
 local downdown = false
+local leftdown = false
+local rightdown = false
+
 local totalOffset = 0
 local tiles = gfx.imagetable.new('assets/link/rocksprite')
 local map = gfx.tilemap.new()
-
 map:setImageTable(tiles)
 map:setSize(TILES_ON_SCREEN, BUFFER_TILES)
+
+local star = gfx.sprite.new(gfx.image.new('assets/link/s1'))
 
 function initializeTiles()
     for row = 1, BUFFER_TILES do
@@ -25,9 +32,19 @@ function initializeTiles()
                 block = 6
             end
 
+            -- map:setTag("Rock")
             map:setTileAtPosition(column, row, block)
+
         end
     end
+
+    gfx.sprite.addEmptyCollisionSprite(250,50,16,16)
+
+
+    star:moveTo(300,50)
+    star:setTag(1)
+    star:setCollideRect(0,0,16,16)
+    star:add()
 end
 
 initializeTiles()
@@ -75,7 +92,11 @@ end
 
 local function handleInputs()
     -- Is down being pressed
+    updown = playdate.buttonIsPressed(playdate.kButtonUp)
     downdown = playdate.buttonIsPressed(playdate.kButtonDown)
+    leftdown = playdate.buttonIsPressed(playdate.kButtonLeft)
+    rightdown = playdate.buttonIsPressed(playdate.kButtonRight)
+    
 end
 
 local function moveBlocks()
@@ -97,9 +118,56 @@ local function moveBlocks()
     map:draw(0, -totalOffset)
 end
 
+local function moveStar()
+    local x, y = 0, 0
+
+    if updown then
+        y = -1
+    elseif downdown then
+        y = 1
+    elseif leftdown then
+        x = -1
+    elseif rightdown then
+        x = 1
+    end
+
+    star:moveBy(x, y)
+end
+
+local function checkCollisions()
+    local collisions =  gfx.sprite:allOverlappingSprites()
+
+    if #collisions > 0 then
+        for c = 1, #collisions do
+            print("collision", #collisions, collisions[c])
+            local c = collisions[1]
+            
+            local sprite1 = c[1]
+            local sprite2 = c[2]
+            print("sprites",sprite1, sprite2)
+
+            if sprite1:getTag() ~= 1 then
+                sprite1:remove()
+                map:setTileAtPosition(1, 1, 34)
+            end
+
+            if sprite2:getTag() ~= 1 then
+                sprite2:remove()
+                map:setTileAtPosition(1, 1, 34)
+            end
+        end
+    end
+end
 
 
 function playdate.update()
+    gfx.sprite:update()
+
     handleInputs()
     moveBlocks()
+    moveStar()
+    checkCollisions()
+
+    star:moveWithCollisions(star.x, star.y)
+    
 end
