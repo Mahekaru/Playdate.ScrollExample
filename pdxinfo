@@ -5,5 +5,5 @@ author=Mahekaru
 description=Scroll And Collision demo
 bundleID=com.panic.mahekaru
 version=1.0
-buildNumber=8
+buildNumber=2
 imagePath=.assets/link
