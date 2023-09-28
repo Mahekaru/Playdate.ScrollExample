@@ -8,6 +8,8 @@ local TILES_ON_SCREEN = 15 -- Screen Width
 local BUFFER_TILES = 20 -- Ensure this is the actual height of your tilemap. Adjust if necessary.
 local SCROLL_SPEED = 3
 
+local COLLISION_SPRITE_1_Y = 160
+local COLLISION_SPRITE_2_Y = 176
 -- Is down being pressed
 local updown = false
 local downdown = false
@@ -25,9 +27,25 @@ map:setSize(TILES_ON_SCREEN, BUFFER_TILES)
 
 local tileSprite = gfx.sprite.new()
 
+local something
 
 -- map:setZIndex(1000)
 local star = gfx.sprite.new(gfx.image.new('assets/link/s1'))
+
+local function createEmptyCollision()
+    local y = COLLISION_SPRITE_1_Y
+    for r = 0, 1 do
+        if r == 1 then
+            y = COLLISION_SPRITE_2_Y
+        end
+        for i = 0, 14 do
+            local x = 16 * i
+            gfx.sprite.addEmptyCollisionSprite(x, y, 16, 16):setTag(5)
+        end
+    end
+
+    something = gfx.sprite.addEmptyCollisionSprite(300,100,16,16):setTag(42)
+end
 
 function initializeTiles()
     for row = 1, BUFFER_TILES do
@@ -39,13 +57,14 @@ function initializeTiles()
                 block = 6
             end
 
-            -- map:setTag("Rock")
+            -- setting up rocks
             map:setTileAtPosition(column, row, block)
 
         end
     end
 
-    gfx.sprite.addEmptyCollisionSprite(0,0,16,16):setTag(5)
+    -- Simple hitbox
+    createEmptyCollision()
 
     tileSprite:setTilemap(map)
     tileSprite:setZIndex(1000)
@@ -53,6 +72,7 @@ function initializeTiles()
     tileSprite:setCenter(0, 0)
     tileSprite:moveTo(0, 0)
 
+    -- Creating the star which acts like the rig
     star:moveTo(300,50)
     star:setTag(1)
     star:setCollideRect(0,0,37,34)
@@ -61,6 +81,8 @@ function initializeTiles()
 end
 
 initializeTiles()
+
+
 
 -- Grabs the top 3 rows of tiles
 local function getTopTiles()
@@ -137,17 +159,18 @@ local function moveBlocks()
     
 end
 
+local STARSPEED = 2
 local function moveStar()
     local x, y = 0, 0
 
     if updown then
-        y = -1
+        y = -STARSPEED
     elseif downdown then
-        y = 1
+        y = STARSPEED
     elseif leftdown then
-        x = -1
+        x = -STARSPEED
     elseif rightdown then
-        x = 1
+        x = STARSPEED
     end
 
     star:moveBy(x, y)
