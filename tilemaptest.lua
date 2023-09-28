@@ -55,7 +55,7 @@ function initializeTiles()
 
     star:moveTo(300,50)
     star:setTag(1)
-    star:setCollideRect(0,0,37,37)
+    star:setCollideRect(0,0,37,34)
     star:setZIndex(2000)
     star:add()
 end
