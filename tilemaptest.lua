@@ -20,31 +20,34 @@ local totalOffset = 0
 local tiles = gfx.imagetable.new('assets/link/rocksprite')
 local map = gfx.tilemap.new()
 
-
-
 map:setImageTable(tiles)
 map:setSize(TILES_ON_SCREEN, BUFFER_TILES)
 
 local tileSprite = gfx.sprite.new()
 
-local something
+local collisionOverlay = {}
 
--- map:setZIndex(1000)
 local star = gfx.sprite.new(gfx.image.new('assets/link/s1'))
 
 local function createEmptyCollision()
     local y = COLLISION_SPRITE_1_Y
+    local created = 1
+    
     for r = 0, 1 do
         if r == 1 then
             y = COLLISION_SPRITE_2_Y
         end
+
         for i = 0, 14 do
             local x = 16 * i
-            gfx.sprite.addEmptyCollisionSprite(x, y, 16, 16):setTag(5)
+            collisionOverlay[created] = gfx.sprite.addEmptyCollisionSprite(x, y, 16, 16)
+            collisionOverlay[created]:setTag(5)
+            collisionOverlay[created]:setGroups(2)
+            collisionOverlay[created]:setCollidesWithGroups(1)
+            -- print("so...",#collisionOverlay, collisionOverlay[created])
+            created += 1
         end
     end
-
-    something = gfx.sprite.addEmptyCollisionSprite(300,100,16,16):setTag(42)
 end
 
 function initializeTiles()
@@ -77,6 +80,8 @@ function initializeTiles()
     star:setTag(1)
     star:setCollideRect(0,0,37,34)
     star:setZIndex(2000)
+    star:setGroups(1)
+    star:setCollidesWithGroups(2)
     star:add()
 end
 
@@ -104,7 +109,7 @@ end
 -- Moves whole screen tile down
 -- Moves all blocks from 4th row up
 local function shiftAllTilesUp()
-    for row = 1, BUFFER_TILES-3, 1 do  -- start from one less than the bottom
+    for row = 1, BUFFER_TILES-SCROLL_SPEED, 1 do  -- start from one less than the bottom
         for column = 1, TILES_ON_SCREEN do
             local tileBelow = map:getTileAtPosition(column, row + 3)
             map:setTileAtPosition(column, row, tileBelow)
@@ -116,7 +121,7 @@ end
 local function placeTopTilesAtBottom(topTiles)
     local x_topTile = 1
 
-    for row = BUFFER_TILES - 3, BUFFER_TILES-1, 1 do
+    for row = BUFFER_TILES - SCROLL_SPEED, BUFFER_TILES-1, 1 do
         for column = 1, TILES_ON_SCREEN do
             map:setTileAtPosition(column, row, topTiles[x_topTile])
             x_topTile +=1
@@ -135,12 +140,12 @@ end
 local function moveBlocks()
     if downdown then 
 
-        print("tileSprite y", tileSprite.y, -TILE_WIDTH)
+        -- print("tileSprite y", tileSprite.y, -TILE_WIDTH)
         
 
 
         if tileSprite.y <= -TILE_WIDTH then
-            print("returning to start")
+            -- print("returning to start")
 
             local topTiles = getTopTiles()
 
@@ -148,16 +153,34 @@ local function moveBlocks()
             placeTopTilesAtBottom(topTiles)
 
             local returnY = TILE_WIDTH + tileSprite.y
-            print("return to ", -2)
+            -- print("return to ", -2)
 
-            tileSprite:moveTo(0, -2)
+            tileSprite:moveTo(0, -SCROLL_SPEED)
         end
 
-        tileSprite:moveBy(0,-1)
+        --first row has reached the top
+        -- print("index 1", collisionOverlay[1].y)
+        for c = 1, #collisionOverlay do
+            collisionOverlay[c]:moveBy(0,-SCROLL_SPEED)
+            
+            -- print("Collision y",collisionOverlay[c].y)
+            
+            if collisionOverlay[c].y <= 149 then
+                collisionOverlay[c]:moveTo(collisionOverlay[c].x, 181)
+                print("index",collisionOverlay[c].y)
+            end
+        end
+        
+
+
+
+        tileSprite:moveBy(0,-SCROLL_SPEED)
     end
 
     
 end
+
+
 
 local STARSPEED = 2
 local function moveStar()
@@ -188,7 +211,7 @@ local function checkCollisions()
             for pair=1, #collisionPairs do
                 local sprite = collisionPairs[pair]
 
-                if sprite:getTag() ~= 1 then
+                if sprite:getTag() ~= 1 and sprite:getTag() ~= 42 then
                     print("sprite tag: ", sprite:getTag())
                     sprite:remove()
                 end
