@@ -17,9 +17,16 @@ local rightdown = false
 local totalOffset = 0
 local tiles = gfx.imagetable.new('assets/link/rocksprite')
 local map = gfx.tilemap.new()
+
+
+
 map:setImageTable(tiles)
 map:setSize(TILES_ON_SCREEN, BUFFER_TILES)
 
+local tileSprite = gfx.sprite.new()
+
+
+-- map:setZIndex(1000)
 local star = gfx.sprite.new(gfx.image.new('assets/link/s1'))
 
 function initializeTiles()
@@ -38,12 +45,18 @@ function initializeTiles()
         end
     end
 
-    gfx.sprite.addEmptyCollisionSprite(250,50,16,16)
+    gfx.sprite.addEmptyCollisionSprite(0,0,16,16):setTag(5)
 
+    tileSprite:setTilemap(map)
+    tileSprite:setZIndex(1000)
+    tileSprite:add()
+    tileSprite:setCenter(0, 0)
+    tileSprite:moveTo(0, 0)
 
     star:moveTo(300,50)
     star:setTag(1)
-    star:setCollideRect(0,0,16,16)
+    star:setCollideRect(0,0,37,37)
+    star:setZIndex(2000)
     star:add()
 end
 
@@ -89,33 +102,39 @@ local function placeTopTilesAtBottom(topTiles)
     end
 end
 
-
 local function handleInputs()
     -- Is down being pressed
     updown = playdate.buttonIsPressed(playdate.kButtonUp)
     downdown = playdate.buttonIsPressed(playdate.kButtonDown)
     leftdown = playdate.buttonIsPressed(playdate.kButtonLeft)
     rightdown = playdate.buttonIsPressed(playdate.kButtonRight)
-    
 end
 
 local function moveBlocks()
     if downdown then 
-        totalOffset = totalOffset + SCROLL_SPEED
-        -- print("totaloffset: ", totalOffset)
-        if totalOffset >= TILE_WIDTH then
-            -- Cache the first top 3 row
+
+        print("tileSprite y", tileSprite.y, -TILE_WIDTH)
+        
+
+
+        if tileSprite.y <= -TILE_WIDTH then
+            print("returning to start")
+
             local topTiles = getTopTiles()
 
             shiftAllTilesUp()
             placeTopTilesAtBottom(topTiles)
 
-            totalOffset = 2
+            local returnY = TILE_WIDTH + tileSprite.y
+            print("return to ", -2)
+
+            tileSprite:moveTo(0, -2)
         end
+
+        tileSprite:moveBy(0,-1)
     end
+
     
-    -- print("totaloffset", -totalOffset)
-    map:draw(0, -totalOffset)
 end
 
 local function moveStar()
@@ -140,20 +159,16 @@ local function checkCollisions()
     if #collisions > 0 then
         for c = 1, #collisions do
             print("collision", #collisions, collisions[c])
-            local c = collisions[1]
             
-            local sprite1 = c[1]
-            local sprite2 = c[2]
-            print("sprites",sprite1, sprite2)
+            local collisionPairs = collisions[1]
+            
+            for pair=1, #collisionPairs do
+                local sprite = collisionPairs[pair]
 
-            if sprite1:getTag() ~= 1 then
-                sprite1:remove()
-                map:setTileAtPosition(1, 1, 34)
-            end
-
-            if sprite2:getTag() ~= 1 then
-                sprite2:remove()
-                map:setTileAtPosition(1, 1, 34)
+                if sprite:getTag() ~= 1 then
+                    print("sprite tag: ", sprite:getTag())
+                    sprite:remove()
+                end
             end
         end
     end
@@ -161,8 +176,8 @@ end
 
 
 function playdate.update()
+    
     gfx.sprite:update()
-
     handleInputs()
     moveBlocks()
     moveStar()
