@@ -7,18 +7,34 @@ local TILE_WIDTH = 50 -- 3 rows
 local TILES_ON_SCREEN = 15 -- Screen Width
 local BUFFER_TILES = 20 -- Ensure this is the actual height of your tilemap. Adjust if necessary.
 local SCROLL_SPEED = 3
+local TILE_SIZE = 16
+local COLLISION_TAGS={
+    Player = 1,
+    Rocks = 2,
+    Reset_Bar = 3
+}
+-- Inputs
+--------------------------
+local updown = false    --
+local downdown = false  --
+local leftdown = false  --
+local rightdown = false --
+--------------------------
 
-local COLLISION_SPRITE_1_Y = 160
-local COLLISION_SPRITE_2_Y = 176
--- Is down being pressed
-local updown = false
-local downdown = false
-local leftdown = false
-local rightdown = false
-
-local totalOffset = 0
+-- local totalOffset = 0
 local tiles = gfx.imagetable.new('assets/link/rocksprite')
 local map = gfx.tilemap.new()
+
+-- local RESET_COLLISION = 152
+-- local COLLISION_ROW_3 = 184
+
+local TILE_SPRITE_X = 0
+local TILE_SPRITE_Y = 0
+
+local COLLISION_RESET_Y = TILE_SPRITE_Y + (TILE_SIZE * 8)
+local COLLISION_SPRITE_1_Y = TILE_SPRITE_Y + (TILE_SIZE * 10)
+local COLLISION_SPRITE_2_Y = TILE_SPRITE_Y + (TILE_SIZE * 11)
+
 
 map:setImageTable(tiles)
 map:setSize(TILES_ON_SCREEN, BUFFER_TILES)
@@ -26,6 +42,7 @@ map:setSize(TILES_ON_SCREEN, BUFFER_TILES)
 local tileSprite = gfx.sprite.new()
 
 local collisionOverlay = {}
+local resetBar
 
 local star = gfx.sprite.new(gfx.image.new('assets/link/s1'))
 
@@ -40,14 +57,22 @@ local function createEmptyCollision()
 
         for i = 0, 14 do
             local x = 16 * i
-            collisionOverlay[created] = gfx.sprite.addEmptyCollisionSprite(x, y, 16, 16)
-            collisionOverlay[created]:setTag(5)
+            collisionOverlay[created] = gfx.sprite.addEmptyCollisionSprite(x, y, TILE_SIZE, TILE_SIZE)
+            collisionOverlay[created]:setTag(COLLISION_TAGS.Rocks)
             collisionOverlay[created]:setGroups(2)
-            collisionOverlay[created]:setCollidesWithGroups(1)
+            
+            collisionOverlay[created]:setCollidesWithGroups({1,3})
             -- print("so...",#collisionOverlay, collisionOverlay[created])
             created += 1
         end
     end
+
+    resetBar = gfx.sprite.addEmptyCollisionSprite(0,COLLISION_RESET_Y,16 * 15, 16)
+    resetBar:setTag(COLLISION_TAGS.Reset_Bar)
+    resetBar:setGroups(3)
+    resetBar:setCollidesWithGroups(2)
+
+    
 end
 
 function initializeTiles()
@@ -67,16 +92,19 @@ function initializeTiles()
     end
 
     -- Simple hitbox
+    print("COLLISION_RESET_Y", COLLISION_RESET_Y)
+    print("COLLISION_SPRITE_1_Y", COLLISION_SPRITE_1_Y)
+    print("Collision Sprite 2 Y", COLLISION_SPRITE_2_Y)
     createEmptyCollision()
 
     tileSprite:setTilemap(map)
     tileSprite:setZIndex(1000)
     tileSprite:add()
     tileSprite:setCenter(0, 0)
-    tileSprite:moveTo(0, 0)
+    tileSprite:moveTo(TILE_SPRITE_X, TILE_SPRITE_Y)
 
     -- Creating the star which acts like the rig
-    star:moveTo(300,50)
+    star:moveTo(300,155)
     star:setTag(1)
     star:setCollideRect(0,0,37,34)
     star:setZIndex(2000)
@@ -140,47 +168,37 @@ end
 local function moveBlocks()
     if downdown then 
 
-        -- print("tileSprite y", tileSprite.y, -TILE_WIDTH)
-        
-
-
         if tileSprite.y <= -TILE_WIDTH then
-            -- print("returning to start")
 
             local topTiles = getTopTiles()
 
             shiftAllTilesUp()
             placeTopTilesAtBottom(topTiles)
 
-            local returnY = TILE_WIDTH + tileSprite.y
-            -- print("return to ", -2)
-
             tileSprite:moveTo(0, -SCROLL_SPEED)
         end
 
+        -- print("COLLISION_ROW_3", COLLISION_RESET_Y)
+        -- if tileSprite.y <= COLLISION_RESET_Y then
+            
+        -- end
+
         --first row has reached the top
-        -- print("index 1", collisionOverlay[1].y)
+        --print("index 1", collisionOverlay[1].y, collisionOverlay[16].y)
         for c = 1, #collisionOverlay do
-            collisionOverlay[c]:moveBy(0,-SCROLL_SPEED)
-            
             -- print("Collision y",collisionOverlay[c].y)
-            
-            if collisionOverlay[c].y <= 149 then
-                collisionOverlay[c]:moveTo(collisionOverlay[c].x, 181)
-                print("index",collisionOverlay[c].y)
-            end
+             --print("index location",c, collisionOverlay[c].y)
+            -- if collisionOverlay[c].y == 150 then
+            --     -- print("Inside",collisionOverlay)
+            --     collisionOverlay[c]:moveTo(collisionOverlay[c].x, 180)
+            -- end
+
+            collisionOverlay[c]:moveBy(0, -SCROLL_SPEED)
         end
-        
-
-
 
         tileSprite:moveBy(0,-SCROLL_SPEED)
     end
-
-    
 end
-
-
 
 local STARSPEED = 2
 local function moveStar()
@@ -196,6 +214,7 @@ local function moveStar()
         x = STARSPEED
     end
 
+    -- print("star y ", star.y)
     star:moveBy(x, y)
 end
 
@@ -204,17 +223,35 @@ local function checkCollisions()
 
     if #collisions > 0 then
         for c = 1, #collisions do
-            print("collision", #collisions, collisions[c])
+            --print("collision", #collisions, collisions[c])
             
-            local collisionPairs = collisions[1]
+            local collisionPairs = collisions[c]
             
-            for pair=1, #collisionPairs do
-                local sprite = collisionPairs[pair]
+            local sprite1 = collisionPairs[1]
+            local sprite2 = collisionPairs[2]
+            
+            if (sprite1:getTag() == COLLISION_TAGS.Player and sprite2:getTag() == COLLISION_TAGS.Rocks) or 
+               (sprite2:getTag() == COLLISION_TAGS.Player and sprite1:getTag() == COLLISION_TAGS.Rocks) then
+                for pair=1, #collisionPairs do
+                        local sprite = collisionPairs[pair]--what was collided into
 
-                if sprite:getTag() ~= 1 and sprite:getTag() ~= 42 then
-                    print("sprite tag: ", sprite:getTag())
-                    sprite:remove()
+                        if sprite:getTag() == COLLISION_TAGS.Rocks then
+                            -- print("PLAYER HAS HIT A ROCK")
+                            sprite:remove()
+                        end
                 end
+            elseif (sprite1:getTag() == COLLISION_TAGS.Rocks and sprite2:getTag() == COLLISION_TAGS.Reset_Bar) or 
+                    (sprite2:getTag() == COLLISION_TAGS.Rocks and sprite1:getTag() == COLLISION_TAGS.Reset_Bar) then
+                    
+                    
+
+                    for pair=1, #collisionPairs do
+                        local sprite = collisionPairs[pair]--what was collided into
+        
+                        if sprite:getTag() == COLLISION_TAGS.Rocks then
+                            sprite:moveTo(sprite.x, sprite.y + (TILE_SIZE * 2))
+                        end
+                    end
             end
         end
     end
@@ -230,5 +267,5 @@ function playdate.update()
     checkCollisions()
 
     star:moveWithCollisions(star.x, star.y)
-    
+    COLLISION_SPRITE_2_Y = (tileSprite.y) + (TILE_SIZE * 11)
 end
