@@ -22,7 +22,7 @@ local COLLISION_SPRITE_2_Y = TILE_SPRITE_Y + (TILE_SIZE * 11)
 local TILE_INDEX_COLUMN = 1
 local TILE_INDEX_ROW = 11
 
-local STARSPEED = 2
+local STARSPEED = 5
 
 local COLLISION_TAGS={
     Player = 1,
@@ -82,7 +82,9 @@ local function createEmptyCollision()
             collisionOverlay[created]:setGroups(COLLISION_TAGS.Rocks)
             
             collisionOverlay[created]:setCollidesWithGroups({COLLISION_TAGS.Player,COLLISION_TAGS.Reset_Bar})
-            collisionOverlay[created].index = {TILE_INDEX_COLUMN, TILE_INDEX_ROW}
+
+            collisionOverlay[created].tilePosition = {i + 1, r + 11}
+
             TILE_INDEX_COLUMN +=1
 
             created += 1
@@ -177,6 +179,17 @@ local function shiftAllTilesUp()
             map:setTileAtPosition(column, row, tileBelow)
         end
     end
+
+
+    for c = 1, #collisionOverlay do
+        -- Update tilePosition for each collision sprite after shifting tiles
+        collisionOverlay[c].tilePosition[2] = collisionOverlay[c].tilePosition[2] - SCROLL_SPEED
+        
+        -- Wrap around if it's out of bounds
+        if collisionOverlay[c].tilePosition[2] <= 0 then
+            collisionOverlay[c].tilePosition[2] = collisionOverlay[c].tilePosition[2] + TILE_HEIGHT
+        end
+    end
 end
 
 -- pastes the 3 rows from the top to last 3 rows at the bottom
@@ -218,9 +231,7 @@ local function moveBlocks()
             end
 
             tileSprite:moveBy(0,-SCROLL_SPEED)
-
         end
-        
     end
 end
 
@@ -231,8 +242,7 @@ local function checkCollisions()
 
     if #collisions > 0 then
         for c = 1, #collisions do
-            --print("collision", #collisions, collisions[c])
-            
+
             local collisionPairs = collisions[c]
             
             local sprite1 = collisionPairs[1]
@@ -240,34 +250,41 @@ local function checkCollisions()
             
             if (sprite1:getTag() == COLLISION_TAGS.Player and sprite2:getTag() == COLLISION_TAGS.Rocks) or 
                (sprite2:getTag() == COLLISION_TAGS.Player and sprite1:getTag() == COLLISION_TAGS.Rocks) then
-                for pair=1, #collisionPairs do
-                        local sprite = collisionPairs[pair]--what was collided into
-
-                        if sprite:getTag() == COLLISION_TAGS.Rocks then
-                            print("REMOVING ", sprite.index[1], sprite.index[2])
-                            map:setTileAtPosition(sprite.index[1], sprite.index[2], TILE_EMPTY_INDEX)
-                            sprite:remove()
-                        end
-                end
+                    theLoop(collisionPairs, false)
             elseif (sprite1:getTag() == COLLISION_TAGS.Rocks and sprite2:getTag() == COLLISION_TAGS.Reset_Bar) or 
                     (sprite2:getTag() == COLLISION_TAGS.Rocks and sprite1:getTag() == COLLISION_TAGS.Reset_Bar) then
-
-                    for pair=1, #collisionPairs do
-                        local sprite = collisionPairs[pair]--what was collided into
-        
-                        if sprite:getTag() == COLLISION_TAGS.Rocks then
-                            sprite:moveTo(sprite.x, sprite.y + (TILE_SIZE * 2))
-                            sprite.index[2] += 1
-
-                            if sprite.index[2] >= TILE_HEIGHT then
-                                sprite.index[2] = 11
-                            end
-                        end
-                    end
+                    theLoop(collisionPairs, true)
             end
         end
     end
 end
+
+function theLoop(pairs, reset)
+    for pair=1, #pairs do
+        local sprite = pairs[pair]--what was collided into
+
+        if sprite:getTag() == COLLISION_TAGS.Rocks then
+
+
+            if reset then
+                -- Move the sprite down by TILE_SIZE * 2
+                sprite:moveTo(sprite.x, sprite.y + (TILE_SIZE * 2))
+                
+                sprite.tilePosition[2] = sprite.tilePosition[2] + 2
+                
+                -- Wrap around logic in case the tilePosition[2] exceeds TILE_HEIGHT
+                if sprite.tilePosition[2] >= TILE_HEIGHT then
+                    sprite.tilePosition[2] = sprite.tilePosition[2] - TILE_HEIGHT
+                end
+            else
+                print("REMOVING ", sprite.x, sprite.y)
+                map:setTileAtPosition(sprite.tilePosition[1], sprite.tilePosition[2], TILE_EMPTY_INDEX)
+                sprite:remove()
+            end
+        end
+    end
+end
+
 
 
 function playdate.update()
