@@ -27,7 +27,8 @@ local STARSPEED = 5
 local COLLISION_TAGS={
     Player = 1,
     Rocks = 2,
-    Reset_Bar = 3
+    Reset_Bar = 3,
+    Walls = 4
 }
 
 -- Inputs
@@ -81,20 +82,13 @@ local function createEmptyCollision()
             collisionOverlay[created]:setTag(COLLISION_TAGS.Rocks)
             collisionOverlay[created]:setGroups(COLLISION_TAGS.Rocks)
             
-            collisionOverlay[created]:setCollidesWithGroups({COLLISION_TAGS.Player,COLLISION_TAGS.Reset_Bar})
+            collisionOverlay[created]:setCollidesWithGroups({COLLISION_TAGS.Player, COLLISION_TAGS.Reset_Bar})
 
             collisionOverlay[created].tilePosition = {i + 1, r + 11}
 
-            TILE_INDEX_COLUMN +=1
-
             created += 1
         end
-
-        TILE_INDEX_ROW +=1
-        TILE_INDEX_COLUMN = 1
     end
-
-
 end
 
 local function createResetBar()
@@ -135,8 +129,24 @@ local function createStar()
     star:setCollideRect(0,0,37,34)
     star:setZIndex(2000)
     star:setGroups(COLLISION_TAGS.Player)
-    star:setCollidesWithGroups(COLLISION_TAGS.Rocks)
+    star:setCollidesWithGroups({COLLISION_TAGS.Rocks,COLLISION_TAGS.Walls})
     star:add()
+end
+
+local function createWalls()
+    local w1, w2, w3, w4
+    --LEFT AND RIGHT WALLS
+    w1 = gfx.sprite.addEmptyCollisionSprite(-5, 0, 5, 240)--LEFT WALL
+    w2 = gfx.sprite.addEmptyCollisionSprite(405, 0, 5, 240)--RIGHT WALL
+
+    --UP AND DOWN WALLS
+    w3 = gfx.sprite.addEmptyCollisionSprite(0, -5, 400, 5)
+    w4 = gfx.sprite.addEmptyCollisionSprite(0, 245, 400, 5)
+
+    w1:setGroups(COLLISION_TAGS.Walls)
+    w2:setGroups(COLLISION_TAGS.Walls)
+    w3:setGroups(COLLISION_TAGS.Walls)
+    w4:setGroups(COLLISION_TAGS.Walls)
 end
 
 
@@ -148,7 +158,7 @@ function initializeTiles()
     createResetBar()
     createTileSprite()
     createStar()
-
+    createWalls()
 end
 
 initializeTiles()
